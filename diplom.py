@@ -1,13 +1,13 @@
-# ПО ИТОГУ: ЗАБЫЛ ЧТО В ОДНОМ ДНЕ НЕСКОЛЬКО ПАР, ПЕРЕДЕЛАТЬ
-
 import pandas as pd
 import math
 import os
 import sys
 from openpyxl import Workbook
+from openpyxl.utils import range_boundaries
 
 
 wb = Workbook()
+ws = wb.create_sheet('Test')
 
 
 def main():
@@ -60,29 +60,23 @@ def beauty_print_timetables(timetables):
 
 def xl_print_timetables(timetables):
     for timetable in timetables:
-        ws = wb.create_sheet(timetable)
-
-        ws.column_dimensions['A'].width = 50
-        ws.column_dimensions['B'].width = 50
-        ws.column_dimensions['C'].width = 50
-        ws.column_dimensions['D'].width = 50
-        ws.column_dimensions['E'].width = 50
-
         timetable = timetables[timetable]
-        ws.cell(row=1,column=1).value = 'Чётная неделя'
-        for idx, day in enumerate(timetable['even']):
-            for i, lesson in enumerate(day):
-                if lesson == '':
-                    continue
-                else:
-                    ws.cell(row=i+2,column=idx+1).value = f'{i+1}. {lesson["lesson"]}'
-        ws.cell(row=14,column=1).value = 'Чётная неделя'
+        ws.cell(row=1,column=5).value = 'Нечётная неделя'
         for idx, day in enumerate(timetable['odd']):
             for i, lesson in enumerate(day):
                 if lesson == '':
                     continue
                 else:
-                    ws.cell(row=i+15,column=idx+1).value = f'{i+1}. {lesson["lesson"]}'
+                    ws.cell(row=idx+2,column=i+1).value = f'{i+1}. {lesson["lesson"]}'
+        ws.cell(row=1,column=11).value = 'Чётная неделя'
+        for idx, day in enumerate(timetable['even']):
+            for i, lesson in enumerate(day):
+                if lesson == '':
+                    continue
+                else:
+                    ws.cell(row=idx+15,column=i+1).value = f'{i+1}. {lesson["lesson"]}'
+    
+    del wb['Sheet']
     wb.save("sample.xlsx")
     wb.close()
 
@@ -105,7 +99,7 @@ def lessons_to_timetables(lessons):
         for week in timetable:
             week = timetable[week]
             for day in week:
-                for i in range(10):
+                for i in range(20):
                     day.append('')
     
     # создаем массив пар, которые не удалось установить
@@ -140,15 +134,15 @@ def fill_timetable(timetables, group, week_lessons):
         # проверяем, что на эту пару не установлена другая
         if timetables[group][week][day][lesson_num] == '':
             # проверяем свободен ли урок
-            if is_lesson_free(timetables, lesson['lesson'], week == 'even', day, lesson_num):
+            if is_lesson_free(timetables, lesson['lesson'], week == 'even', day, lesson_num, lesson['teacher']):
                 # размещение пары на своем месте
                 timetables[group][week][day][lesson_num] = lesson
 
                 # удаляем пару из week_lessons
-                if (lesson['hours'] < 3):
+                if (lesson['hours'] < 2):
                     week_lessons.remove(lesson)
                 else:
-                    lesson['hours'] -= 2
+                    lesson['hours'] -= 1
 
                 # возвращаемся на первую пару первого дня
                 day = 0
@@ -176,7 +170,7 @@ def get_lessons_of_group(lessons, target_group):
     return result
 
 # функция проверяет, свободен ли определенный предмет на конкретную неделю на конкретной паре
-def is_lesson_free(timetables, lesson_name, is_week_even, day, lesson_num) -> bool:
+def is_lesson_free(timetables, lesson_name, is_week_even, day, lesson_num, teacher_name = '') -> bool:
     # проходимся по всем расписаниям
     for timetable in timetables:
         timetable = timetables[timetable]
@@ -187,7 +181,11 @@ def is_lesson_free(timetables, lesson_name, is_week_even, day, lesson_num) -> bo
         try:
             # если эта пара уже занята
             if timetable[week][day][lesson_num]['lesson'] == lesson_name:
-                return False
+                # проверяем, занята ли она тем же преподом
+                if timetable[week][day][lesson_num]['teacher'] == teacher_name:
+                    return False
+                else:
+                    continue
             else:
                 continue
         except:
