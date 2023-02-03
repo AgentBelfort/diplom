@@ -75,14 +75,14 @@ def xl_print_timetables(timetables):
                 if lesson == '':
                     continue
                 else:
-                    ws.cell(row=i+2,column=idx+1).value = f'{i}. {lesson["lesson"]}'
+                    ws.cell(row=i+2,column=idx+1).value = f'{i+1}. {lesson["lesson"]}'
         ws.cell(row=14,column=1).value = 'Чётная неделя'
         for idx, day in enumerate(timetable['odd']):
             for i, lesson in enumerate(day):
                 if lesson == '':
                     continue
                 else:
-                    ws.cell(row=i+15,column=idx+1).value = f'{i}. {lesson["lesson"]}'
+                    ws.cell(row=i+15,column=idx+1).value = f'{i+1}. {lesson["lesson"]}'
     wb.save("sample.xlsx")
     wb.close()
 
@@ -105,7 +105,7 @@ def lessons_to_timetables(lessons):
         for week in timetable:
             week = timetable[week]
             for day in week:
-                for i in range(20):
+                for i in range(10):
                     day.append('')
     
     # создаем массив пар, которые не удалось установить
@@ -137,28 +137,35 @@ def fill_timetable(timetables, group, week_lessons):
     while len(week_lessons) > 0:
         lesson = week_lessons[0]
 
-        # проверяем свободен ли урок
-        if is_lesson_free(timetables, lesson['lesson'], week == 'even', day, lesson_num):
-            # размещение пары на своем месте
-            timetables[group][week][day][lesson_num] = lesson
+        # проверяем, что на эту пару не установлена другая
+        if timetables[group][week][day][lesson_num] == '':
+            # проверяем свободен ли урок
+            if is_lesson_free(timetables, lesson['lesson'], week == 'even', day, lesson_num):
+                # размещение пары на своем месте
+                timetables[group][week][day][lesson_num] = lesson
 
-            # удаляем пару из week_lessons
-            if (lesson['hours'] < 2):
-                week_lessons.remove(lesson)
+                # удаляем пару из week_lessons
+                if (lesson['hours'] < 3):
+                    week_lessons.remove(lesson)
+                else:
+                    lesson['hours'] -= 2
+
+                # возвращаемся на первую пару первого дня
+                day = 0
+                lesson_num = 0
             else:
-                lesson['hours'] -= 1
-        else:
-            pass
-            # переносим пару в конец очереди
+                # пробуем поставить в другое место
+                day += 1
         
         day += 1
         if (day >= 5):
             if (week == 'even'):
                 week = 'odd'
+                day = 0
             else:
                 week = 'even'
+                day = 0
                 lesson_num += 1
-            day = 0
 
 # из списка общего списка занятий возвращает занатия только для определенной группы
 def get_lessons_of_group(lessons, target_group):
